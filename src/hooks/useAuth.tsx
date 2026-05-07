@@ -1,41 +1,29 @@
-import { useEffect, useState, createContext, useContext, ReactNode } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { ReactNode, createContext, useContext } from "react";
+
+// Single-user mode: no real authentication. All data is keyed under a
+// fixed shared "user_id" so existing per-user queries keep working.
+export const SHARED_USER_ID = "00000000-0000-0000-0000-000000000000";
+
+type SharedUser = { id: string; email: string };
 
 type AuthCtx = {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
+  user: SharedUser;
+  session: null;
+  loading: false;
   signOut: () => Promise<void>;
 };
 
-const Ctx = createContext<AuthCtx>({ user: null, session: null, loading: true, signOut: async () => {} });
+const sharedUser: SharedUser = { id: SHARED_USER_ID, email: "shared@bot.local" };
+
+const Ctx = createContext<AuthCtx>({
+  user: sharedUser,
+  session: null,
+  loading: false,
+  signOut: async () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  return (
-    <Ctx.Provider
-      value={{
-        session,
-        user: session?.user ?? null,
-        loading,
-        signOut: async () => { await supabase.auth.signOut(); },
-      }}
-    >
-      {children}
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={{ user: sharedUser, session: null, loading: false, signOut: async () => {} }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);
