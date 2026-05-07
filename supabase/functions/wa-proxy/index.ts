@@ -9,12 +9,11 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SHARED_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
- * Authenticated proxy. The dashboard calls this with the user's JWT.
- * The function looks up the user's bot_settings (server_url + api_token)
- * and forwards the request to the bot server. The token never leaves the backend.
+ * Single-user proxy. No JWT required. Looks up the shared bot_settings row
+ * and forwards the request to the configured bot server.
  *
  * Body: { path: string, method?: string, body?: any }
  */
@@ -22,15 +21,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    if (!authHeader.startsWith("Bearer ")) return json({ error: "unauthorized" }, 401);
-
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: uErr } = await userClient.auth.getUser();
-    if (uErr || !user) return json({ error: "unauthorized" }, 401);
-
     const { path, method = "GET", body } = await req.json();
     if (typeof path !== "string" || !path.startsWith("/")) {
       return json({ error: "invalid path" }, 400);
@@ -40,7 +30,7 @@ Deno.serve(async (req) => {
     const { data: settings } = await admin
       .from("bot_settings")
       .select("server_url, api_token, webhook_secret")
-      .eq("user_id", user.id)
+      .eq("user_id", SHARED_USER_ID)
       .maybeSingle();
 
     if (!settings?.server_url || !settings?.api_token) {

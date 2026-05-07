@@ -1,9 +1,5 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { NavLink, Outlet } from "react-router-dom";
 import {
-  LogOut,
   MessageCircle,
   QrCode,
   Send,
@@ -23,17 +19,6 @@ const nav = [
 ];
 
 export default function DashboardLayout() {
-  const { user, loading, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) navigate("/auth", { replace: true });
-  }, [loading, user, navigate]);
-
-  if (loading || !user) {
-    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
-  }
-
   return (
     <div className="min-h-screen flex bg-[image:var(--gradient-subtle)]">
       <aside className="w-64 border-r bg-sidebar/80 backdrop-blur-sm flex flex-col">
@@ -67,11 +52,8 @@ export default function DashboardLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t space-y-2">
-          <div className="text-xs text-muted-foreground truncate px-1">{user.email}</div>
-          <Button variant="outline" size="sm" className="w-full" onClick={signOut}>
-            <LogOut className="size-4 mr-2" /> Sign out
-          </Button>
+        <div className="p-3 border-t">
+          <div className="text-xs text-muted-foreground px-1">Single-user mode</div>
         </div>
       </aside>
       <main className="flex-1 overflow-auto">
